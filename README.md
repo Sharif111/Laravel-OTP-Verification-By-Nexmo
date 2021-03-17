@@ -1,78 +1,300 @@
-<p align="center"><img src="https://res.cloudinary.com/dtfbvvkyp/image/upload/v1566331377/laravel-logolockup-cmyk-red.svg" width="400"></p>
+Configuration:
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/d/total.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
-</p>
+Laravel OTP Verification By Nexmo
+sharif
 
-## About Laravel
+ 
+Via Composer Create-Project
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Alternatively, you may also install Laravel by issuing the Composer create-project command in your terminal:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+composer create-project --prefer-dist laravel/laravel blog "7.0*"
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+ 
 
-## Learning Laravel
+ After completely install laravel then install this package 
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+To install the PHP client library using Composer:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+composer require nexmo/laravel
 
-## Laravel Sponsors
+ 
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+Add Nexmo\Laravel\NexmoServiceProvider to the providers array in your config/app.php:
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[British Software Development](https://www.britishsoftware.co)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- [UserInsights](https://userinsights.com)
-- [Fragrantica](https://www.fragrantica.com)
-- [SOFTonSOFA](https://softonsofa.com/)
-- [User10](https://user10.com)
-- [Soumettre.fr](https://soumettre.fr/)
-- [CodeBrisk](https://codebrisk.com)
-- [1Forge](https://1forge.com)
-- [TECPRESSO](https://tecpresso.co.jp/)
-- [Runtime Converter](http://runtimeconverter.com/)
-- [WebL'Agence](https://weblagence.com/)
-- [Invoice Ninja](https://www.invoiceninja.com)
-- [iMi digital](https://www.imi-digital.de/)
-- [Earthlink](https://www.earthlink.ro/)
-- [Steadfast Collective](https://steadfastcollective.com/)
-- [We Are The Robots Inc.](https://watr.mx/)
-- [Understand.io](https://www.understand.io/)
-- [Abdel Elrafa](https://abdelelrafa.com)
-- [Hyper Host](https://hyper.host)
-- [Appoly](https://www.appoly.co.uk)
-- [OP.GG](https://op.gg)
+'providers' => [
+    // Other service providers...
 
-## Contributing
+    Nexmo\Laravel\NexmoServiceProvider::class,
+],
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+ 
 
-## Code of Conduct
+And  add an alias in your
+ config/app.php
+: 
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+'aliases' => [
+    ...
+    'Nexmo' => Nexmo\Laravel\Facade\Nexmo::class,
+],
+ Configuration
+You can use artisan vendor:publish to copy the distribution configuration file to your app's config directory:
 
-## Security Vulnerabilities
+php artisan vendor:publish 
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Register Controller: 
+<?php
 
-## License
+namespace App\Http\Controllers\Auth;
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+use App\User;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Foundation\Auth\RegistersUsers;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\Request;
+use App\SendCode;
+class RegisterController extends Controller
+{  
+
+    use RegistersUsers;
+
+    /**
+     * Where to redirect users after registration.
+     *
+     * @var string
+     */
+    protected $redirectTo = '/verify';
+
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('guest');
+    }
+public function register(Request $request)
+{
+    $this->validator($request->all())->validate();
+    event(new Registered($user = $this->create($request->all())));
+    return $this->registered($request,$user) ?: redirect('/verify?phone='.$request->phone);
+}
+    /**
+     * Get a validator for an incoming registration request.
+     *
+     * @param  array  $data
+     * @return \Illuminate\Contracts\Validation\Validator
+     */
+    protected function validator(array $data)
+    {
+        return Validator::make($data, [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+        ]);
+    }
+
+    /**
+     * Create a new user instance after a valid registration.
+     *
+     * @param  array  $data
+     * @return \App\User
+     */
+    protected function create(array $data)
+    {
+        $user = User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'phone'=>$data['phone'],
+            'active'=>0,
+        ]);
+        if($user){
+            $user->code=SendCode::sendCode($user->phone);
+            $user->save();
+        }
+    }
+}
+
+VerifyController:
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\User;
+class VerifyController extends Controller
+{
+    public function getVerify(){
+        return view('verify');
+    }
+    public function postVerify(Request $request){
+        if($user=User::where('code',$request->code)->first()){
+            $user->active=1;
+            $user->code=null;
+            $user->save();
+            return redirect()->route('login')->withMessage('Your account is active');
+        }
+        else{
+            return back()->withMessage('verify code is not correct. Please try again');
+        }
+    }
+}
+ 
+LoginController:
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Foundation\Auth\AuthenticatesUsers;
+use Illuminate\Http\Request;
+use App\SendCode;
+class LoginController extends Controller
+{
+    /*
+    |--------------------------------------------------------------------------
+    | Login Controller
+    |--------------------------------------------------------------------------
+    |
+    | This controller handles authenticating users for the application and
+    | redirecting them to your home screen. The controller uses a trait
+    | to conveniently provide its functionality to your applications.
+    |
+    */
+
+    use AuthenticatesUsers;
+
+    /**
+     * Where to redirect users after login.
+     *
+     * @var string
+     */
+    protected $redirectTo = '/home';
+
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('guest')->except('logout');
+    }
+    public function login(Request $request)
+    {
+        $this->validateLogin($request);
+        if($this->hasTooManyLoginAttempts($request)){
+            $this->fireLockoutResponse($request);
+        }
+         //-------------------
+
+               if($this->guard()->validate($this->credentials($request))){
+                $user=$this->guard()->getLastAttempted();
+                if($user->active && $this->attemptLogin($request)){
+                    return $this->sendLoginResponse($request);
+                }
+              
+               else{
+                $this->incrementLoginAttempts($request);
+                $user->code=SendCode::sendCode($user->phone);
+                if($user->save()){
+                    return redirect('/verify?phone='.$user->phone);
+                }
+               }
+               }
+        //-----------
+       $this->incrementLoginAttempts($request);
+       return $this->sendFailedLoginResponse($request);
+
+
+
+    }
+}
+ 
+Sendcode.php
+
+<?php
+namespace App;
+class SendCode
+{
+    public static function sendCode($phone){
+        $code=rand(1111,9999);
+        $nexmo=app('Nexmo\Client');
+        $nexmo->message()->send([
+            'to'=>'+880'.(int) $phone,
+            'from'=> '+8801832258644',
+            'text'=>'Verify code: '.$code,
+        ]);
+        return $code;
+    }
+
+}
+
+Verify.blade.php
+
+@extends('layouts.app')
+@section('content')
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">{{ __('Please verify code from your phone number to active account') }}</div>
+
+                <div class="card-body">
+                     @if(Session::has('message'))
+                    <div class="alert alert-danger">{{Session::get('message')}}</div>
+                    @endif
+                    <form method="POST" action="{{ route('verify') }}">
+                        @csrf
+
+
+                        <div class="form-group row">
+                            <label for="password" class="col-md-4 col-form-label text-md-right">{{ __('code') }}</label>
+
+                            <div class="col-md-6">
+                                <input id="code" type="text" class="form-control{{ $errors->has('code') ? ' is-invalid' : '' }}" name="code" required>
+
+                                @if ($errors->has('code'))
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $errors->first('code') }}</strong>
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="form-group row mb-0">
+                            <div class="col-md-8 offset-md-4">
+                                <button type="submit" class="btn btn-primary">
+                                    {{ __('Verify') }}
+                                </button>
+
+                           
+                            </div>
+                        </div>
+
+                     
+
+                       
+                    </form>
+                </div>
+                <div class="card-footer">
+                    <a href="">Reduest new code</a>
+                    <input type="hidden" name="phone" value="{{request()->phone}}">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+ 
+Route:
+<?php
+Route::get('/home', 'HomeController@index')->name('home');
+Route::get('/verify','VerifyController@getVerify')->name('getverify');
+Route::post('/verify','VerifyController@postVerify')->name('verify');
+ 
+
