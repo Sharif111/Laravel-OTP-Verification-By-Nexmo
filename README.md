@@ -1,7 +1,6 @@
 Configuration:
 
-##Laravel OTP Verification By Nexmo
-sharif
+Laravel OTP Verification By Nexmo
 
  
 Via Composer Create-Project
@@ -12,7 +11,7 @@ composer create-project --prefer-dist laravel/laravel blog "7.0*"
 
  
 
- After completely install laravel then install this package 
+After completely install laravel then install this package 
 
 To install the PHP client library using Composer:
 
